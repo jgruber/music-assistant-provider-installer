@@ -7,6 +7,11 @@
     "repos": {
       "label": "Repositories",
       "description": "Add one GitHub repository per entry — click + to add another. Format: `https://github.com/owner/repo` or `https://github.com/owner/repo@branch-or-tag` (defaults to `main`). On save, each archive is downloaded, extracted into `custom_providers/<domain>/`, and its `requirements` are pip-installed. New providers show up after you restart Music Assistant."
+    },
+    "restart_ma": {
+      "label": "Restart Music Assistant to activate new providers",
+      "description": "Music Assistant walks the custom-providers directory once at startup, so a newly installed provider only appears after a restart. Click to restart now — the page will briefly disconnect and come back on its own.",
+      "action_label": "Restart Music Assistant"
     }
   }
 }

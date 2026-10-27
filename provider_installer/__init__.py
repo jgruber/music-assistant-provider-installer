@@ -30,6 +30,7 @@ import logging
 import os
 import re
 import shutil
+import signal
 import tarfile
 import tempfile
 from pathlib import Path
@@ -38,7 +39,10 @@ from urllib.parse import urlparse
 
 from aiohttp import ClientTimeout
 from music_assistant.models.plugin import PluginProvider
-from music_assistant_models.config_entries import ConfigEntry
+from music_assistant_models.config_entries import (
+    ConfigActionResult,
+    ConfigEntry,
+)
 from music_assistant_models.enums import ConfigEntryType
 
 if TYPE_CHECKING:
@@ -50,6 +54,7 @@ if TYPE_CHECKING:
 
 
 CONF_REPOS = "repos"
+ACTION_RESTART_MA = "restart_ma"
 
 LOGGER = logging.getLogger("music_assistant.provider_installer")
 
@@ -72,7 +77,7 @@ class ProviderInstaller(PluginProvider):
     """Fetches custom providers from GitHub into the fork's custom_providers dir."""
 
     async def get_config_entries(self) -> tuple[ConfigEntry, ...]:
-        """Expose the one config entry: a repeating URL list."""
+        """Expose the repository URL list and the restart action button."""
         return (
             ConfigEntry(
                 key=CONF_REPOS,
@@ -84,7 +89,35 @@ class ProviderInstaller(PluginProvider):
                 # format as the per-input placeholder (template hint).
                 format="https://github.com/owner/repo@branch-or-tag",
             ),
+            ConfigEntry(
+                key=ACTION_RESTART_MA,
+                type=ConfigEntryType.ACTION,
+                action=ACTION_RESTART_MA,
+                required=False,
+            ),
         )
+
+    async def handle_config_action(
+        self, action: str
+    ) -> tuple[ConfigEntry, ...] | ConfigActionResult | None:
+        """Handle the restart-Music-Assistant button press."""
+        if action == ACTION_RESTART_MA:
+            self.logger.info(
+                "Operator requested restart via Custom Provider Installer"
+            )
+            # Give the WS caller a moment to receive the response before the
+            # loop stops. SIGTERM goes to the MA process; the main loop sees
+            # it, awaits mass.stop(), and exits. The container's init
+            # restarts the process.
+            loop = asyncio.get_running_loop()
+            loop.call_later(1.0, lambda: os.kill(os.getpid(), signal.SIGTERM))
+            return ConfigActionResult(
+                message=(
+                    "Music Assistant is restarting now. The page may "
+                    "disconnect for a few seconds; reload once it reconnects."
+                )
+            )
+        return await super().handle_config_action(action)
 
     async def handle_async_init(self) -> None:
         """
