@@ -8,5 +8,5 @@
   "documentation": "https://github.com/jgruber/music-assistant-provider-installer",
   "stage": "alpha",
   "multi_instance": false,
-  "icon": "package-variant"
+  "icon": "puzzle"
 }
