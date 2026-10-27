@@ -1,0 +1,12 @@
+{
+  "type": "plugin",
+  "domain": "provider_installer",
+  "name": "Custom Provider Installer",
+  "description": "Install custom Music Assistant providers from GitHub by URL. Lives alongside the fork's custom_providers loader — you add a repo URL here, this plugin fetches it into storage_path/custom_providers/ and pip-installs its manifest requirements, and the fork's loader picks it up on the next Music Assistant restart. Works for every provider type the loader supports: music, player, metadata, audio_analysis, plugin.",
+  "codeowners": ["@jgruber"],
+  "requirements": [],
+  "documentation": "https://github.com/jgruber/music-assistant-provider-installer",
+  "stage": "alpha",
+  "multi_instance": false,
+  "icon": "package-variant"
+}

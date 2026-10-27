@@ -1,0 +1,12 @@
+{
+  "manifest": {
+    "name": "Custom Provider Installer",
+    "description": "Install custom Music Assistant providers from GitHub by URL. Lives alongside the fork's custom_providers loader — you add a repo URL here, this plugin fetches it into storage_path/custom_providers/ and pip-installs its manifest requirements, and the fork's loader picks it up on the next Music Assistant restart. Works for every provider type the loader supports: music, player, metadata, audio_analysis, plugin."
+  },
+  "config_entries": {
+    "repos": {
+      "label": "Repository URLs",
+      "description": "GitHub repositories to install custom providers from, one per line. Each entry is a URL like `https://github.com/owner/repo` with an optional `@branch-or-tag` suffix (default is `main`). The archive is downloaded, the top-level provider directory is extracted into `/data/custom_providers/<domain>/`, and the provider's `requirements` are pip-installed. Changes take effect after a Music Assistant restart."
+    }
+  }
+}
