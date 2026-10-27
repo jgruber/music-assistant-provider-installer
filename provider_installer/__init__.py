@@ -80,6 +80,9 @@ class ProviderInstaller(PluginProvider):
                 required=False,
                 multi_value=True,
                 default_value=[],
+                # On a multi_value STRING, the forked MA frontend treats
+                # format as the per-input placeholder (template hint).
+                format="https://github.com/owner/repo@branch-or-tag",
             ),
         )
 
