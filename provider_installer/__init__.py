@@ -80,7 +80,6 @@ class ProviderInstaller(PluginProvider):
                 required=False,
                 multi_value=True,
                 default_value=[],
-                translation_key="config_entries.repos.label",
             ),
         )
 
