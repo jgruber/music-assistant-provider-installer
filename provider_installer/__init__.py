@@ -56,6 +56,16 @@ if TYPE_CHECKING:
 CONF_REPOS = "repos"
 ACTION_RESTART_MA = "restart_ma"
 
+# Known-sticky dynamic pin: the bgutil PO Token plugin ships as a pip package
+# whose version MUST match the companion sidecar container (brainicism/
+# bgutil-ytdlp-pot-provider). If they drift, every PO token the plugin signs
+# is silently rejected by YouTube and every stream URL returns 403. The
+# sidecar's /ping returns {"version": "<x.y.z>"} — we query it at install
+# time and rewrite any manifest's bgutil pin to that exact version, so the
+# two always start up matched regardless of which side bumped last.
+BGUTIL_PKG = "bgutil-ytdlp-pot-provider"
+BGUTIL_SIDECAR_URL = "http://127.0.0.1:4416"
+
 LOGGER = logging.getLogger("music_assistant.provider_installer")
 
 CUSTOM_PROVIDERS_SUBDIR = "custom_providers"
@@ -151,6 +161,9 @@ class ProviderInstaller(PluginProvider):
             all_requirements.extend(reqs)
 
         if all_requirements:
+            all_requirements = await _resolve_bgutil_pin(
+                session, all_requirements, BGUTIL_SIDECAR_URL, self.logger
+            )
             await asyncio.to_thread(_pip_install_requirements, all_requirements)
 
         if installed:
@@ -302,6 +315,60 @@ def _bytes_io(data: bytes):
     from io import BytesIO
 
     return BytesIO(data)
+
+
+_REQ_NAME_SPLIT = re.compile(r"[=<>!~\[\s;]")
+
+
+def _requirement_name(req: str) -> str:
+    """Return the bare, PyPA-normalised package name from a requirement string."""
+    name = _REQ_NAME_SPLIT.split(req, maxsplit=1)[0].strip().lower()
+    return name.replace("_", "-")
+
+
+async def _resolve_bgutil_pin(
+    session: ClientSession,
+    requirements: list[str],
+    sidecar_url: str,
+    logger: logging.Logger,
+) -> list[str]:
+    """Rewrite the bgutil-ytdlp-pot-provider pin to the sidecar's current version.
+
+    Keeps the pip-side plugin and the companion sidecar container locked to
+    the same version. Falls back to the manifest-declared pin if the sidecar
+    can't be reached.
+    """
+    if not any(_requirement_name(r) == BGUTIL_PKG for r in requirements):
+        return requirements
+    try:
+        async with session.get(
+            f"{sidecar_url}/ping", timeout=ClientTimeout(total=3)
+        ) as resp:
+            resp.raise_for_status()
+            payload = await resp.json()
+        version = str(payload["version"])
+    except Exception as err:  # noqa: BLE001
+        logger.warning(
+            "Could not reach bgutil sidecar at %s/ping to pin dynamically (%s); "
+            "using manifest-declared pin as-is. If playback 403s, this is the first "
+            "thing to check.",
+            sidecar_url,
+            err,
+        )
+        return requirements
+
+    out: list[str] = []
+    for r in requirements:
+        if _requirement_name(r) == BGUTIL_PKG:
+            new_req = f"{BGUTIL_PKG}=={version}"
+            if new_req != r:
+                logger.info(
+                    "Aligning %s pin with sidecar: %r -> %r", BGUTIL_PKG, r, new_req
+                )
+            out.append(new_req)
+        else:
+            out.append(r)
+    return out
 
 
 def _pip_install_requirements(requirements: list[str]) -> None:
